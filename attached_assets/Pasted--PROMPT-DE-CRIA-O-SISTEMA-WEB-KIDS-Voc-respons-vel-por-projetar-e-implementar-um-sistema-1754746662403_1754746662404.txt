@@ -1,0 +1,164 @@
+# PROMPT DE CRIAÇÃO – SISTEMA WEB KIDS
+
+Você é responsável por projetar e implementar um **sistema web** para gestão de turmas do Kids, com foco em **presenças/faltas**, **meditação**, **versículos**, **presença no culto**, **anotações por criança** e **envio rápido de mensagens** aos responsáveis. Siga cuidadosamente as instruções abaixo.
+
+---
+
+## 1) Objetivo do produto
+
+Criar uma aplicação web simples e prática para líderes/monitores registrarem a participação das crianças e se comunicarem com responsáveis usando modelos de mensagens prontos. O sistema deve reduzir a fricção do registro, gerar **relatórios claros** e permitir **exportação** de dados.
+
+---
+
+## 2) Escopo (MVP)
+
+* **Cadastro**: Crianças, Responsáveis, Turmas, Calendário de Encontros (Aula) e Cultos, Versículos (série vigente), Meditações (links/arquivos).
+* **Chamada**:
+
+  * **Aula**: marcar Presente/Ausente por data e turma.
+  * **Culto**: marcar Presente/Ausente por data (registro separado de Aula).
+* **Meditação**: registrar status de entrega da semana (Entregou / Não Entregou / Em andamento) e, opcionalmente, anexo/foto.
+* **Versículos**: registrar memorização por referência (Memorizou / Em andamento / Não memorizou) + observação.
+* **Anotações**: notas por criança com tags (comportamento, saúde, família, espiritual, elogio) e nível de atenção (baixa/média/alta), opcional lembrete/data.
+* **Mensagens rápidas**: biblioteca de **modelos com variáveis** e envio via WhatsApp (deep link). Históricos de envio.
+* **Relatórios e Exportação**: por período/turma/criança; exportar **Excel (.xlsx)** e **Copiar texto**.
+
+---
+
+## 3) Perfis e permissões
+
+* **Admin**: CRUD de tudo, acesso a relatórios gerais.
+* **Líder**: gerencia turmas atribuídas; registra presença, culto, meditação/versículos; cria anotações; envia mensagens; vê relatórios da própria turma.
+* **Auxiliar**: registra e consulta dados da turma; sem exclusões sensíveis.
+* **Princípio de menor privilégio**: anotações sensíveis visíveis apenas para funções autorizadas.
+
+---
+
+## 4) Modelagem de dados (entidades e campos)
+
+> Não fixe tecnologias; descreva o modelo lógico e as regras.
+
+* **Criança**: id, nome completo, data nascimento, turmaId, fotoUrl (opcional), alergias/observações (texto curto).
+* **Responsável**: id, nome, parentesco, telefoneWhatsApp, email (opcional), autorizacaoContato (bool).
+* **CriançaResponsável** (muitos-para-muitos): criançaId, responsávelId, principal (bool).
+* **Turma**: id, nome, sala (opcional), observações.
+* **EncontroAula**: id, turmaId, data, observações.
+* **Culto**: id, data, descrição (ex.: “Culto da manhã”), observações.
+* **PresencaAula**: id, encontroAulaId, criançaId, status (Presente/Ausente), observação.
+* **PresencaCulto**: id, cultoId, criançaId, status (Presente/Ausente), observação.
+* **MeditacaoSemana**: id, semanaRef (AAAAs-SemanaN ou data-início), tema, linkMaterial, anexosPermitidos (bool).
+* **EntregaMeditacao**: id, criançaId, meditacaoSemanaId, status (Entregou/Não/Em andamento), dataEntrega (opcional), evidênciaUrl (opcional), observação.
+* **Versiculo**: id, referencia (ex.: “Sl 119:105”), texto, semanaRef (opcional).
+* **MemorizacaoVersiculo**: id, criançaId, versiculoId, status (Memorizou/Em andamento/Não), observação.
+* **Anotacao**: id, criançaId, título, texto, tags \[lista], atencao (baixa/média/alta), lembreteData (opcional), criadoPor, criadoEm.
+* **ModeloMensagem**: id, título, corpoTemplate, variaveisSuportadas \[lista], ativo (bool), categoria (falta, meditação, culto, incentivo, boas-vindas, pastoral, aviso).
+* **EnvioMensagem**: id, criançaId, responsavelId, modeloMensagemId, canal (WhatsApp), mensagemGerada, dataEnvio, enviadoPor.
+* **Usuario**: id, nome, perfil (Admin/Líder/Auxiliar), turmasVinculadas \[lista], ativo (bool).
+* **LogAuditoria**: id, usuarioId, acao, recurso, payloadResumo, dataHora.
+
+Chaves e restrições: garantir unicidade por (turmaId, data) em EncontroAula; por (data, descrição) em Culto; integridade referencial em todas as FK.
+
+---
+
+## 5) Regras de negócio
+
+* **Faltas consecutivas**: ao registrar 2 faltas seguidas na Aula, exibir sugestão de envio automático do modelo “saudade + motivo”.
+* **Meditação**: se a semana atual estiver sem entrega até **quarta-feira 18:00**, sugerir envio do lembrete com link do material.
+* **Versículos**: 3 semanas seguidas como “Em andamento” geram sugestão de mensagem de incentivo.
+* **Culto ≠ Aula**: presença no culto não altera presença da aula (relatórios separados, visão consolidada disponível).
+* **Privacidade**: anotações marcadas como sensíveis visíveis apenas para Admin/Líder. Histórico de alterações auditado.
+
+---
+
+## 6) UX/UI (princípios e telas)
+
+* **Estilo**: moderno, **tema dark agradável**, tipografia legível, foco em toques/cliques mínimos.
+* **Acessibilidade**: contraste adequado, navegação por teclado, labels claros.
+* **Dashboard (início)**: cartões com
+
+  * Presença na Aula (semana) – % e totais
+  * Presença no Culto (semana)
+  * Meditações entregues vs pendentes
+  * Versículos memorizados
+  * Alertas (faltas consecutivas, lembretes pendentes)
+* **Turmas**: lista com busca/filtro; ações rápidas: Chamada Aula, Chamada Culto, Meditação/Versículos.
+* **Chamada (Aula)**: grade da turma para a data selecionada; toggles Presente/Ausente; botão “Salvar e Sugerir Mensagens”.
+* **Chamada (Culto)**: lista de crianças; toggles Presente/Ausente; salvar.
+* **Meditação/Versículos**: aba com status por criança; editar em lote; upload opcional de evidência.
+* **Perfil da Criança**: dados básicos, responsáveis, timeline (presenças, meditações, versículos, anotações), botão “Enviar Mensagem”.
+* **Mensagens**: biblioteca de modelos como **botões**; pré-visualização com variáveis preenchidas; botão “Abrir no WhatsApp”. Histórico de envios.
+* **Relatórios**: filtros (período, turma, criança, status); tabela; botões **Exportar Excel** e **Copiar**.
+* **Configurações**: usuários, modelos de mensagem, séries de versículos, semanas de meditação, permissões.
+
+Microinterações: confirmação não intrusiva ao salvar; undo rápido; loading states claros.
+
+---
+
+## 7) Modelos de mensagem (variáveis e exemplos)
+
+**Variáveis padrão**: `{responsavel}`, `{crianca}`, `{turma}`, `{data}`, `{linkMeditacao}`, `{versiculoRef}`, `{culto}`.
+
+* **Falta (com motivo)**: “Olá, {responsavel}! Sentimos a falta da {crianca} neste domingo na {turma}. Para eu repassar à liderança, você poderia me informar, por favor, o motivo da ausência?”
+* **Falta (justificada)**: “Olá, {responsavel}! Obrigado por avisar sobre a {crianca}. Já registramos a justificativa. Qualquer ajuda que possamos oferecer, conte conosco.”
+* **Lembrete de meditação**: “Oi, {responsavel}! Para esta semana, a meditação da {crianca} está aqui: {linkMeditacao}. Se puder, peça para ela entregar no próximo domingo. Obrigado!”
+* **Cobrança suave de meditação**: “Olá, {responsavel}! Notei que a meditação da {crianca} desta semana ainda não foi entregue. Se precisar do material, segue novamente: {linkMeditacao}. Pode trazer no próximo encontro.”
+* **Versículo — incentivo**: “Oi, {responsavel}! Estamos trabalhando o versículo {versiculoRef}. A {crianca} está quase lá. Se puder treinar alguns minutinhos em casa, vai ajudar bastante.”
+* **Parabéns**: “Parabéns à {crianca}! Ela entregou a meditação e memorizou {versiculoRef}. Estamos muito felizes com o empenho.”
+* **Presença no culto**: “Olá, {responsavel}! Passando para avisar que a {crianca} participou do {culto} hoje. Foi um tempo muito bom!”
+* **Boas-vindas**: “Bem-vindo, {responsavel}! A {crianca} agora faz parte da {turma}. Qualquer dúvida, estou à disposição. Aqui está o material da semana: {linkMeditacao}.”
+* **Aviso especial**: “Olá, {responsavel}! Neste domingo teremos uma programação especial na {turma}. Se possível, cheguem 10 minutos antes. Será uma bênção!”
+* **Apoio pastoral**: “{responsavel}, percebemos algumas ausências da {crianca}. Se pudermos ajudar em algo, por favor, nos diga. Estamos orando por vocês.”
+
+**Geração de link WhatsApp**: usar padrão `https://wa.me/TELEFONE?text=MENSAGEM_URL_ENCODED` na ação “Abrir no WhatsApp”.
+
+---
+
+## 8) Fluxos principais (Happy Path)
+
+1. **Chamada da Aula**: Turma → Data → Marcar Presente/Ausente → Salvar → Sugerir modelos para faltas.
+2. **Registro do Culto**: Data do culto → Listar crianças → Marcar Presente/Ausente → Salvar.
+3. **Meditação/Versículos**: Semana corrente → Marcar status em lote → Salvar → Sugerir lembretes ou incentivos.
+4. **Mensagens**: Filtro (ex.: “faltou hoje”) → Escolher modelo → Pré-visualizar com variáveis → Abrir WhatsApp → Logar envio.
+5. **Anotação**: Perfil da Criança → Nova Anotação → Tags + Atenção + Lembrete → Salvar (visibilidade por perfil).
+
+---
+
+## 9) Relatórios (exemplos)
+
+* **Frequência por Criança** (período): % presença aula, % presença culto.
+* **Faltas consecutivas**: lista de crianças com >=2 faltas seguidas.
+* **Meditações**: entregas vs pendências por semana.
+* **Versículos**: taxa de memorização por série/tema.
+* **Consolidado semanal**: visão única com Aula, Culto, Meditação, Versículo.
+
+Todos com filtros e **Exportar Excel** / **Copiar**.
+
+---
+
+## 10) Requisitos não funcionais
+
+* **Usabilidade**: 3 cliques até a ação mais comum (marcar presença). Feedback instantâneo.
+* **Desempenho**: operações de lista/edição em lote com resposta < 300 ms (em condições típicas).
+* **Segurança/Privacidade**: autenticação, controle de acesso por perfil; tratamento de dados pessoais conforme boas práticas; auditoria de alterações.
+* **Confiabilidade**: logs de erro, trilha de auditoria, backups regulares.
+* **Localização**: PT-BR (padrão). Fuso **America/Manaus**.
+
+---
+
+## 11) Critérios de aceite (amostra)
+
+* **CA-01 – Chamada Aula**: Dado uma turma e data, quando o líder marca status de presença e salva, então o sistema persiste todos os registros e exibe confirmação visual.
+* **CA-02 – Faltas consecutivas**: Dadas 2 faltas seguidas, quando a segunda falta é salva, então o sistema sugere o modelo “saudade + motivo”.
+* **CA-03 – Lembrete de Meditação**: Se na quarta-feira 18:00 a entrega não existir, então o sistema exibe card de lembrete com ação de mensagem.
+* **CA-04 – Exportação**: Dado um relatório filtrado, quando o usuário clica em “Exportar Excel”, então um arquivo .xlsx é gerado para download.
+* **CA-05 – Visibilidade de Anotação**: Dada uma anotação sensível, quando um Auxiliar acessa o perfil, então a anotação não é exibida.
+
+---
+
+## 12) Observações finais
+
+* Manter o design **simples, direto e coerente** com uso frequente em dispositivos de diferentes tamanhos de tela.
+* Priorização: reduzir o tempo de registro da chamada e facilitar a **comunicação proativa** com responsáveis.
+* Entregar o MVP com dados de exemplo (semente) para validação e testes.
+
+> Ao concluir, disponibilize: protótipo navegável, backlog (histórias de usuário), matriz de permissões, amostras de exportação (Excel) e documentação curta de operação para líderes.
