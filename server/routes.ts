@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, requireAuth, initializeAdminUser } from "./auth";
 import { 
   insertChildSchema, 
   insertGuardianSchema, 
@@ -11,23 +11,14 @@ import {
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize admin user
+  await initializeAdminUser();
+  
   // Auth middleware
-  await setupAuth(app);
-
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
+  setupAuth(app);
 
   // Children routes
-  app.get("/api/children", isAuthenticated, async (req, res) => {
+  app.get("/api/children", requireAuth, async (req, res) => {
     try {
       const children = await storage.getChildren();
       res.json(children);
@@ -37,7 +28,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/children/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/children/:id", requireAuth, async (req, res) => {
     try {
       const child = await storage.getChild(req.params.id);
       if (!child) {
@@ -50,7 +41,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/children", isAuthenticated, async (req, res) => {
+  app.post("/api/children", requireAuth, async (req, res) => {
     try {
       const validatedData = insertChildSchema.parse(req.body);
       const child = await storage.createChild(validatedData);
@@ -61,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/children/:id", isAuthenticated, async (req, res) => {
+  app.put("/api/children/:id", requireAuth, async (req, res) => {
     try {
       const validatedData = insertChildSchema.partial().parse(req.body);
       const child = await storage.updateChild(req.params.id, validatedData);
@@ -72,7 +63,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/children/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/children/:id", requireAuth, async (req, res) => {
     try {
       await storage.deleteChild(req.params.id);
       res.status(204).send();
@@ -83,7 +74,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Guardian routes
-  app.get("/api/guardians", isAuthenticated, async (req, res) => {
+  app.get("/api/guardians", requireAuth, async (req, res) => {
     try {
       const guardians = await storage.getGuardians();
       res.json(guardians);
@@ -93,7 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/guardians/child/:childId", isAuthenticated, async (req, res) => {
+  app.get("/api/guardians/child/:childId", requireAuth, async (req, res) => {
     try {
       const guardians = await storage.getGuardiansByChild(req.params.childId);
       res.json(guardians);
@@ -103,7 +94,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/guardians", isAuthenticated, async (req, res) => {
+  app.post("/api/guardians", requireAuth, async (req, res) => {
     try {
       const validatedData = insertGuardianSchema.parse(req.body);
       const guardian = await storage.createGuardian(validatedData);
@@ -115,7 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Classes routes
-  app.get("/api/classes", isAuthenticated, async (req, res) => {
+  app.get("/api/classes", requireAuth, async (req, res) => {
     try {
       const classes = await storage.getClasses();
       res.json(classes);
@@ -125,7 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/classes", isAuthenticated, async (req, res) => {
+  app.post("/api/classes", requireAuth, async (req, res) => {
     try {
       const validatedData = insertClassSchema.parse(req.body);
       const classData = await storage.createClass(validatedData);
@@ -137,7 +128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Attendance routes
-  app.post("/api/attendance/class", isAuthenticated, async (req, res) => {
+  app.post("/api/attendance/class", requireAuth, async (req, res) => {
     try {
       const { classMeetingId, childId, status, observation } = req.body;
       const attendance = await storage.markClassAttendance(classMeetingId, childId, status, observation);
@@ -148,7 +139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/attendance/worship", isAuthenticated, async (req, res) => {
+  app.post("/api/attendance/worship", requireAuth, async (req, res) => {
     try {
       const { worshipServiceId, childId, status, observation } = req.body;
       const attendance = await storage.markWorshipAttendance(worshipServiceId, childId, status, observation);
@@ -159,7 +150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/attendance/consecutive-absences/:childId", isAuthenticated, async (req, res) => {
+  app.get("/api/attendance/consecutive-absences/:childId", requireAuth, async (req, res) => {
     try {
       const absences = await storage.getConsecutiveAbsences(req.params.childId, 5);
       res.json({ consecutiveAbsences: absences });
@@ -170,7 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Meditation routes
-  app.get("/api/meditations/weeks", isAuthenticated, async (req, res) => {
+  app.get("/api/meditations/weeks", requireAuth, async (req, res) => {
     try {
       const weeks = await storage.getMeditationWeeks();
       res.json(weeks);
@@ -180,7 +171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/meditations/current", isAuthenticated, async (req, res) => {
+  app.get("/api/meditations/current", requireAuth, async (req, res) => {
     try {
       const meditations = await storage.getCurrentWeekMeditations();
       res.json(meditations);
@@ -190,7 +181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/meditations/status", isAuthenticated, async (req, res) => {
+  app.post("/api/meditations/status", requireAuth, async (req, res) => {
     try {
       const { childId, meditationWeekId, status, observation } = req.body;
       const delivery = await storage.updateMeditationStatus(childId, meditationWeekId, status, observation);
@@ -202,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Verses routes
-  app.get("/api/verses", isAuthenticated, async (req, res) => {
+  app.get("/api/verses", requireAuth, async (req, res) => {
     try {
       const verses = await storage.getBibleVerses();
       res.json(verses);
@@ -212,7 +203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/verses/memorizations", isAuthenticated, async (req, res) => {
+  app.get("/api/verses/memorizations", requireAuth, async (req, res) => {
     try {
       const memorizations = await storage.getVerseMemorizations();
       res.json(memorizations);
@@ -222,7 +213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/verses/memorizations", isAuthenticated, async (req, res) => {
+  app.post("/api/verses/memorizations", requireAuth, async (req, res) => {
     try {
       const { childId, bibleVerseId, status, observation } = req.body;
       const memorization = await storage.updateVerseMemorization(childId, bibleVerseId, status, observation);
@@ -234,7 +225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Notes routes
-  app.get("/api/notes", isAuthenticated, async (req, res) => {
+  app.get("/api/notes", requireAuth, async (req, res) => {
     try {
       const notes = await storage.getNotes();
       res.json(notes);
@@ -244,7 +235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/notes/child/:childId", isAuthenticated, async (req, res) => {
+  app.get("/api/notes/child/:childId", requireAuth, async (req, res) => {
     try {
       const notes = await storage.getNotesByChild(req.params.childId);
       res.json(notes);
@@ -254,7 +245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/notes", isAuthenticated, async (req: any, res) => {
+  app.post("/api/notes", requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const validatedData = insertNoteSchema.parse({ ...req.body, createdBy: userId });
@@ -267,7 +258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Message templates routes
-  app.get("/api/message-templates", isAuthenticated, async (req, res) => {
+  app.get("/api/message-templates", requireAuth, async (req, res) => {
     try {
       const templates = await storage.getMessageTemplates();
       res.json(templates);
@@ -277,7 +268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/message-templates", isAuthenticated, async (req, res) => {
+  app.post("/api/message-templates", requireAuth, async (req, res) => {
     try {
       const validatedData = insertMessageTemplateSchema.parse(req.body);
       const template = await storage.createMessageTemplate(validatedData);
@@ -289,7 +280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Message sends routes
-  app.post("/api/messages/send", isAuthenticated, async (req: any, res) => {
+  app.post("/api/messages/send", requireAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { childId, guardianId, templateId, message } = req.body;
@@ -301,7 +292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/messages/history", isAuthenticated, async (req, res) => {
+  app.get("/api/messages/history", requireAuth, async (req, res) => {
     try {
       const history = await storage.getMessageHistory();
       res.json(history);
@@ -312,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard routes
-  app.get("/api/dashboard/stats", isAuthenticated, async (req, res) => {
+  app.get("/api/dashboard/stats", requireAuth, async (req, res) => {
     try {
       const stats = await storage.getDashboardStats();
       res.json(stats);
