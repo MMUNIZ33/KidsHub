@@ -174,7 +174,7 @@ export const notes = pgTable("notes", {
   attentionLevel: varchar("attention_level", { length: 20 }).notNull(), // baixa, media, alta
   reminderDate: date("reminder_date"),
   isSensitive: boolean("is_sensitive").default(false),
-  createdBy: varchar("created_by").references(() => users.id),
+  createdBy: uuid("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -199,13 +199,13 @@ export const messageSends = pgTable("message_sends", {
   channel: varchar("channel", { length: 20 }).default("whatsapp"),
   generatedMessage: text("generated_message").notNull(),
   sentAt: timestamp("sent_at").defaultNow(),
-  sentBy: varchar("sent_by").references(() => users.id),
+  sentBy: uuid("sent_by").references(() => users.id),
 });
 
 // Audit log table
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").references(() => users.id),
+  userId: uuid("user_id").references(() => users.id),
   action: varchar("action", { length: 100 }).notNull(),
   resource: varchar("resource", { length: 100 }).notNull(),
   resourceId: varchar("resource_id"),

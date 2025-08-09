@@ -10,7 +10,18 @@ import connectPg from "connect-pg-simple";
 
 declare global {
   namespace Express {
-    interface User extends User {}
+    interface User {
+      id: string;
+      username: string;
+      email?: string | null;
+      firstName?: string | null;
+      lastName?: string | null;
+      role?: string | null;
+      isActive?: boolean | null;
+      classIds?: string[] | null;
+      createdAt?: Date | null;
+      updatedAt?: Date | null;
+    }
   }
 }
 
@@ -40,7 +51,7 @@ export function setupAuth(app: Express) {
   });
 
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET!,
+    secret: process.env.SESSION_SECRET || 'dev-session-secret-change-in-production',
     resave: false,
     saveUninitialized: false,
     store: sessionStore,
