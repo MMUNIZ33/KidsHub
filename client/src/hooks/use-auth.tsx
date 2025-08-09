@@ -40,15 +40,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: User) => {
       queryClient.setQueryData(["/api/user"], user);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({
         title: "Login realizado",
         description: "Bem-vindo ao Sistema Kids!",
       });
     },
     onError: (error: Error) => {
+      console.error("Login error:", error);
       toast({
         title: "Erro no login",
-        description: "Usuário ou senha incorretos",
+        description: error.message || "Usuário ou senha incorretos",
         variant: "destructive",
       });
     },
@@ -60,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
       toast({
         title: "Logout realizado",
         description: "Você foi desconectado do sistema",

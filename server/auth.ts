@@ -121,16 +121,30 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    const user = req.user as User;
-    res.status(200).json({ 
-      id: user.id, 
-      username: user.username, 
-      email: user.email, 
-      firstName: user.firstName, 
-      lastName: user.lastName, 
-      role: user.role 
-    });
+  app.post("/api/login", (req, res, next) => {
+    passport.authenticate("local", (err: any, user: User | false, info: any) => {
+      if (err) {
+        return res.status(500).json({ message: "Erro interno do servidor" });
+      }
+      if (!user) {
+        return res.status(401).json({ message: "Usuário ou senha incorretos" });
+      }
+      
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          return res.status(500).json({ message: "Erro ao fazer login" });
+        }
+        
+        res.status(200).json({ 
+          id: user.id, 
+          username: user.username, 
+          email: user.email, 
+          firstName: user.firstName, 
+          lastName: user.lastName, 
+          role: user.role 
+        });
+      });
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res, next) => {
