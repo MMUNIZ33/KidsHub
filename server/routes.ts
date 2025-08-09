@@ -247,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/notes", requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const validatedData = insertNoteSchema.parse({ ...req.body, createdBy: userId });
       const note = await storage.createNote(validatedData);
       res.status(201).json(note);
@@ -282,7 +282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Message sends routes
   app.post("/api/messages/send", requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { childId, guardianId, templateId, message } = req.body;
       const messageSend = await storage.logMessageSend(childId, guardianId, templateId, message, userId);
       res.json(messageSend);

@@ -169,6 +169,39 @@ export function setupAuth(app: Express) {
       role: user.role 
     });
   });
+
+  // Handle legacy routes for compatibility
+  app.get("/api/auth/user", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    const user = req.user as User;
+    res.json({ 
+      id: user.id, 
+      username: user.username, 
+      email: user.email, 
+      firstName: user.firstName, 
+      lastName: user.lastName, 
+      role: user.role 
+    });
+  });
+
+  app.get("/api/login", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    const user = req.user as User;
+    res.json({ 
+      id: user.id, 
+      username: user.username, 
+      email: user.email, 
+      firstName: user.firstName, 
+      lastName: user.lastName, 
+      role: user.role 
+    });
+  });
 }
 
 // Middleware para proteger rotas
