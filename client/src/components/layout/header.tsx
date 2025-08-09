@@ -37,12 +37,12 @@ export default function Header({ title, selectedClass, onClassChange }: HeaderPr
           {/* Quick filters */}
           {onClassChange && (
             <div className="ml-6 flex items-center space-x-4">
-              <Select value={selectedClass || ""} onValueChange={onClassChange}>
+              <Select value={selectedClass || "all"} onValueChange={onClassChange}>
                 <SelectTrigger className="w-48 bg-accent border-border">
                   <SelectValue placeholder="Todas as turmas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as turmas</SelectItem>
+                  <SelectItem value="all">Todas as turmas</SelectItem>
                   {classes?.map((classItem: any) => (
                     <SelectItem key={classItem.id} value={classItem.id}>
                       {classItem.name}

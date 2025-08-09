@@ -71,7 +71,7 @@ export default function Notes() {
   const { isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedChild, setSelectedChild] = useState("");
+  const [selectedChild, setSelectedChild] = useState("all");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [attentionFilter, setAttentionFilter] = useState("all");
   const [showNoteForm, setShowNoteForm] = useState(false);
@@ -281,7 +281,7 @@ export default function Notes() {
                   <SelectValue placeholder="Filtrar por criança" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as crianças</SelectItem>
+                  <SelectItem value="all">Todas as crianças</SelectItem>
                   {children?.map((child: any) => (
                     <SelectItem key={child.id} value={child.id}>
                       {child.fullName}

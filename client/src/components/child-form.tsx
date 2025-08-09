@@ -109,14 +109,14 @@ export default function ChildForm({ child, onSuccess, onCancel }: ChildFormProps
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Turma</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
+                <Select onValueChange={field.onChange} value={field.value || "none"}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione uma turma" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">Sem turma</SelectItem>
+                    <SelectItem value="none">Sem turma</SelectItem>
                     {classes?.map((classItem: any) => (
                       <SelectItem key={classItem.id} value={classItem.id}>
                         {classItem.name}
