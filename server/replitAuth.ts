@@ -27,10 +27,13 @@ export function getSession() {
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
+    createTableIfMissing: true,
     ttl: sessionTtl,
     tableName: "sessions",
   });
+  
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -38,8 +41,9 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: isProduction, // Only secure in production
       maxAge: sessionTtl,
+      sameSite: 'lax'
     },
   });
 }
@@ -78,10 +82,22 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    const user = {};
-    updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
-    verified(null, user);
+    try {
+      console.log("🔐 Authentication verify function called");
+      const user = {};
+      updateUserSession(user, tokens);
+      
+      const claims = tokens.claims();
+      console.log("📋 User claims:", { sub: claims.sub, email: claims.email });
+      
+      await upsertUser(claims);
+      console.log("✅ User upserted successfully");
+      
+      verified(null, user);
+    } catch (error) {
+      console.error("❌ Authentication verify failed:", error);
+      verified(error, null);
+    }
   };
 
   for (const domain of process.env
@@ -109,6 +125,7 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
+    console.log("🔄 Callback route hit");
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
@@ -128,30 +145,40 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  const user = req.user as any;
-
-  if (!req.isAuthenticated() || !user.expires_at) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  if (now <= user.expires_at) {
-    return next();
-  }
-
-  const refreshToken = user.refresh_token;
-  if (!refreshToken) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
-
   try {
-    const config = await getOidcConfig();
-    const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
-    updateUserSession(user, tokenResponse);
-    return next();
+    const user = req.user as any;
+
+    if (!req.isAuthenticated() || !user || !user.claims) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const expires_at = user.expires_at || user.claims?.exp;
+    
+    if (!expires_at) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (now <= expires_at) {
+      return next();
+    }
+
+    const refreshToken = user.refresh_token;
+    if (!refreshToken) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const config = await getOidcConfig();
+      const tokenResponse = await client.refreshTokenGrant(config, refreshToken);
+      updateUserSession(user, tokenResponse);
+      return next();
+    } catch (error) {
+      console.error("Token refresh failed:", error);
+      return res.status(401).json({ message: "Unauthorized" });
+    }
   } catch (error) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
+    console.error("Authentication check failed:", error);
+    return res.status(401).json({ message: "Unauthorized" });
   }
 };
