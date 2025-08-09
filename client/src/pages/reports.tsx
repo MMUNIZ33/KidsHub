@@ -41,8 +41,8 @@ import { ptBR } from "date-fns/locale";
 export default function Reports() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
-  const [selectedClass, setSelectedClass] = useState("");
-  const [selectedChild, setSelectedChild] = useState("");
+  const [selectedClass, setSelectedClass] = useState("all");
+  const [selectedChild, setSelectedChild] = useState("all");
   const [dateRange, setDateRange] = useState({
     from: startOfWeek(new Date()),
     to: endOfWeek(new Date())
@@ -330,7 +330,7 @@ export default function Reports() {
                     <SelectValue placeholder="Todas as turmas" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as turmas</SelectItem>
+                    <SelectItem value="all">Todas as turmas</SelectItem>
                     {classes?.map((classItem: any) => (
                       <SelectItem key={classItem.id} value={classItem.id}>
                         {classItem.name}
@@ -344,7 +344,7 @@ export default function Reports() {
                     <SelectValue placeholder="Todas as crianças" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todas as crianças</SelectItem>
+                    <SelectItem value="all">Todas as crianças</SelectItem>
                     {children?.map((child: any) => (
                       <SelectItem key={child.id} value={child.id}>
                         {child.fullName}
